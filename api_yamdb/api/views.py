@@ -11,10 +11,10 @@ from .permissions import OnlyAdminIfNotGet, IsAdminAuthorModeratorOrReadOnly
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
-    TitleReadSerializer,
-    TitleWriteSerializer,
+    ReadTitleSerializer,
     ReviewSerializer,
-    CommentSerializer
+    CommentSerializer,
+    WriteTitleSerializer
 )
 from reviews.models import Category, Genre, Title, Review
 
@@ -46,19 +46,28 @@ class GenreViewSet(mixins.CreateModelMixin,
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-    serializer_class = TitleReadSerializer
-    pagination_class = LimitOffsetPagination
-    permission_classes = (IsAdminAuthorModeratorOrReadOnly,)
+    queryset = Title.objects.prefetch_related('genre').select_related(
+        'category').order_by('id')
+    permission_classes = (OnlyAdminIfNotGet,)
+    pagination_class = pagination.PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = TitleFilter
-    search_fields = ('genre__slug',)
-    filterset_fields = ('genre__slug',)
+    filterset_fields = ('name', 'year')
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
-        if self.action in ('list', 'retrieve'):
-            return TitleReadSerializer
-        return TitleWriteSerializer
+        if self.action in ['retrieve', 'list']:
+            return ReadTitleSerializer
+        return WriteTitleSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        genre_slug = self.request.query_params.get('genre', None)
+        category_slug = self.request.query_params.get('category', None)
+        if genre_slug:
+            queryset = queryset.filter(genre__slug=genre_slug)
+        if category_slug:
+            queryset = queryset.filter(category__slug=category_slug)
+        return queryset
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
