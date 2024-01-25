@@ -32,11 +32,19 @@ class GenreViewSet(mixins.CreateModelMixin,
                    viewsets.GenericViewSet):
     queryset = Genre.objects.all().order_by('slug')
     serializer_class = GenreSerializer
-    permission_classes = (OnlyAdminIfNotGet,)
+    permission_classes = (OnlyAdminIfNotGet, )
     pagination_class = pagination.PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        return title.reviews.all()
+
+    def perform_create(self, serializer):
+        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
+        serializer.save(author=self.request.user, title=title)
 
 
 class TitleViewSet(viewsets.ModelViewSet):

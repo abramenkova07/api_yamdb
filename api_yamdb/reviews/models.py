@@ -1,14 +1,12 @@
 from django.db import models
-from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db.models import Avg
 
 from .constants import (CHARACTER_QUANTITY,
                         NAME_LENGTH, SLUG_LENGTH,
                         MAX_RATING, MIN_RATING)
+from users.models import CustomUser
 
-
-User = get_user_model()
 
 class BaseModel(models.Model):
     slug = models.SlugField('Слаг', max_length=SLUG_LENGTH,
@@ -58,7 +56,6 @@ class Title(models.Model):
         avg_rating = self.reviews.aggregate(Avg('score'))['score__avg']
         return avg_rating if self.reviews.exists() else None
 
-
     class Meta:
         verbose_name = 'произведение'
         verbose_name_plural = 'произведения'
@@ -79,7 +76,7 @@ class GenreTitle(models.Model):
 
 class Review(models.Model):
     author = models.ForeignKey(
-        User,
+        CustomUser,
         on_delete=models.CASCADE,
         related_name='user_reviews'
     )
@@ -115,7 +112,7 @@ class Comment(models.Model):
         related_name='comments'
     )
     author = models.ForeignKey(
-        User,
+        CustomUser,
         on_delete=models.CASCADE,
         related_name='user_comments'
     )
