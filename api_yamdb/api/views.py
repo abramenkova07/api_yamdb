@@ -1,10 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, pagination, viewsets
-from rest_framework.pagination import LimitOffsetPagination
 from api.permissions import IsAdminAuthorModeratorOrReadOnly
-from .filters import TitleFilter
 
 
 from .permissions import OnlyAdminIfNotGet, IsAdminAuthorModeratorOrReadOnly
@@ -55,7 +52,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
-        if self.action in ['retrieve', 'list']:
+        if self.action in ('retrieve', 'list'):
             return ReadTitleSerializer
         return WriteTitleSerializer
 
