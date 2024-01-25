@@ -51,11 +51,6 @@ class Title(models.Model):
                                  on_delete=models.SET_NULL,
                                  null=True)
 
-    @property
-    def rating(self):
-        avg_rating = self.reviews.aggregate(Avg('score'))['score__avg']
-        return avg_rating if self.reviews.exists() else None
-
     class Meta:
         verbose_name = 'произведение'
         verbose_name_plural = 'произведения'

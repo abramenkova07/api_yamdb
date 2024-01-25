@@ -1,6 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, pagination, viewsets
 from django.shortcuts import get_object_or_404
+from rest_framework import filters, mixins, pagination, viewsets
+
 
 from .permissions import OnlyAdminIfNotGet, IsAdminAuthorModeratorOrReadOnly
 from .serializers import (
@@ -38,14 +39,6 @@ class GenreViewSet(mixins.CreateModelMixin,
     search_fields = ('name',)
     lookup_field = 'slug'
 
-    def get_queryset(self):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        return title.reviews.all()
-
-    def perform_create(self, serializer):
-        title = get_object_or_404(Title, id=self.kwargs.get('title_id'))
-        serializer.save(author=self.request.user, title=title)
-
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.prefetch_related('genre').select_related(
@@ -55,6 +48,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     pagination_class = pagination.PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('category__slug', 'genre__slug', 'name', 'year')
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
