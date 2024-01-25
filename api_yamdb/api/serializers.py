@@ -31,6 +31,7 @@ class GenreSerializer(serializers.ModelSerializer):
 class TitleSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True, read_only=True)
     category = CategorySerializer(read_only=True)
+    # rating = serializers.SerializerMethodField()
 
     class Meta:
         model = Title
@@ -53,3 +54,6 @@ class TitleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Год произведения не может быть позже текущего года.')
         return value
+
+    # def get_rating(self, obj):
+    #     return 0
