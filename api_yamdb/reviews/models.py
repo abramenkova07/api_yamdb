@@ -95,6 +95,12 @@ class Review(models.Model):
     )
 
     class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=('title', 'author', ),
+                name='one_author_one_title'
+            )
+        ]
         ordering = ('-pub_date',)
         verbose_name = 'отзыв'
         verbose_name_plural = 'отзывы'

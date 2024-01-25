@@ -1,6 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+USER = 'user'
+ADMIN = 'admin'
+MODERATOR = 'moderator'
+
 ROLES = (
     ('USER', 'user'),
     ('MODERATOR', 'moderator'),
@@ -50,3 +54,15 @@ class CustomUser(AbstractUser):
         blank=False,
         default='XXXX'
     )
+
+    @property
+    def is_user(self):
+        return self.role == USER
+
+    @property
+    def is_admin(self):
+        return self.role == ADMIN
+
+    @property
+    def is_moderator(self):
+        return self.role == MODERATOR
