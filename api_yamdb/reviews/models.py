@@ -2,10 +2,10 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 
-from .constants import (CHARACTER_QUANTITY,
-                        NAME_LENGTH, SLUG_LENGTH,
-                        MAX_RATING, MIN_RATING,
-                        ROLES)
+from reviews.constants import (CHARACTER_QUANTITY,
+                               NAME_LENGTH, SLUG_LENGTH,
+                               MAX_RATING, MIN_RATING,
+                               ROLES)
 
 
 class CustomUser(AbstractUser):
@@ -50,6 +50,21 @@ class CustomUser(AbstractUser):
         blank=False,
         default='XXXX'
     )
+
+    def __str__(self):
+        return str(self.username)
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin' or self.is_superuser
+
+    @property
+    def is_moderator(self):
+        return self.role == 'moderator'
+
+    @property
+    def is_user(self):
+        return self.role == 'user'
 
 
 class BaseModel(models.Model):

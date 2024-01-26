@@ -3,7 +3,6 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
-
 from rest_framework import (
     filters, generics, mixins, pagination, status, viewsets
 )
@@ -12,20 +11,24 @@ from rest_framework.permissions import (AllowAny, IsAuthenticated)
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.permissions import OnlyAdminIfNotGet, IsAdminAuthorModeratorOrReadOnly
-from .serializers import (
+from api.permissions import (
+    IsAdminAuthorModeratorOrReadOnly,
+    IsSuperUserOrAdmin,
+    OnlyAdminIfNotGet,
+)
+from api.serializers import (
     CategorySerializer,
+    CommentSerializer,
     GenreSerializer,
     ReadTitleSerializer,
     ReviewSerializer,
-    CommentSerializer,
-    WriteTitleSerializer,
     SignUpSerializer,
     TokenSerializer,
     UserMeSerializer,
-    UserSerializer
+    UserSerializer,
+    WriteTitleSerializer,
 )
-from reviews.models import Category, Genre, Title, Review, CustomUser
+from reviews.models import Category, CustomUser, Genre, Review, Title
 
 
 class CategoryViewSet(mixins.CreateModelMixin,
@@ -111,8 +114,6 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class SignUpView(generics.CreateAPIView):
-    """Регистрация по username и email."""
-
     queryset = CustomUser.objects.all()
     serializer_class = SignUpSerializer
     permission_classes = (AllowAny,)
@@ -138,8 +139,6 @@ class SignUpView(generics.CreateAPIView):
 
 
 class TokenObtainView(generics.CreateAPIView):
-    """Получение JWT-токена токена."""
-
     queryset = CustomUser.objects.all()
     serializer_class = TokenSerializer
     permission_classes = (AllowAny,)
@@ -164,12 +163,10 @@ class TokenObtainView(generics.CreateAPIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    """Управление юзерами."""
-
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     lookup_field = 'username'
-    permission_classes = (AllowAny,)
+    permission_classes = (IsSuperUserOrAdmin,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('=username',)
     http_method_names = ['get', 'post', 'patch', 'delete']
@@ -177,20 +174,24 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(
         detail=False,
         methods=['get', 'patch'],
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsAuthenticated,],
         url_path='me'
     )
     def edit_profile(self, request):
-        """Редактирование своего профиля."""
-
+        serializer = UserMeSerializer(request.user)
         if request.method == 'PATCH':
-            serializer = UserMeSerializer(
-                self.request.user,
-                data=request.data,
-                partial=True
-            )
+            if request.user.role == 'admin':
+                serializer = UserSerializer(
+                    self.request.user,
+                    data=request.data,
+                    partial=True
+                )
+            else:
+                serializer = UserMeSerializer(
+                    request.user,
+                    data=request.data,
+                    partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        serializer = UserMeSerializer(self.request.user)
         return Response(serializer.data)
