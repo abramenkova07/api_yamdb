@@ -136,7 +136,7 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_role(self, value):
         if value not in ['user', 'admin', 'moderator']:
             raise ValidationError(
-                'Невозможно назначить пользователю такую роль.'
+                'Нет такой роли.'
             )
         return value
 

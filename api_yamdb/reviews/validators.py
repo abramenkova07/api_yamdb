@@ -11,9 +11,9 @@ def validate_username(value):
         raise ValidationError(
             'Логин не может быть "me"'
         )
-    if not bool(re.match(r'[\w.@+-]+\Z$', value)):
+    if not re.match(r'[\w.@+-]+\Z$', value):
         raise ValidationError(
-            'Некорректные символы в username'
+            'Запрещённые символы в никнейме'
         )
     return value
 
@@ -32,6 +32,6 @@ def validate_unique(data):
         return data
     if email or user:
         raise serializers.ValidationError(
-            'Такой пользователь уже зарегестирован'
+            'Такой пользователь уже зарегистирован'
         )
     return data
