@@ -33,9 +33,9 @@ urlpatterns = [
         'v1/', include(
             [
                 path('', include(router_v1.urls)),
+                path('auth/signup/', SignUpView.as_view(), name='signup'),
+                path('auth/token/', TokenObtainView.as_view(), name='token')
             ]
         )
     ),
-    path('v1/auth/signup/', SignUpView.as_view(), name='signup'),
-    path('v1/auth/token/', TokenObtainView.as_view(), name='token'),
 ]

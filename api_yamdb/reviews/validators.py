@@ -32,6 +32,6 @@ def validate_unique(data):
         return data
     if email or user:
         raise serializers.ValidationError(
-            'Такой пользователь уже зарегистирован'
+            'Такой пользователь уже зарегистрирован'
         )
     return data
