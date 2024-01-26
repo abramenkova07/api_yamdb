@@ -3,8 +3,9 @@ import csv
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from reviews.models import (Category, Comment,
+from reviews.models import (Category, Comment, CustomUser,
                             Genre, GenreTitle, Review, Title)
+
 from reviews.models import CustomUser
 from django.shortcuts import get_object_or_404
 
