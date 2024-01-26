@@ -115,14 +115,12 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 class SignUpView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
-    serializer_class = SignUpSerializer
-    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data.get('username')
-        email = serializer.validated_data.get('email')
+        username = serializer.data.get('username')
+        email = serializer.data.get('email')
         user, created = CustomUser.objects.get_or_create(
             username=username,
             email=email
@@ -131,7 +129,7 @@ class SignUpView(generics.CreateAPIView):
 
         send_mail(
             subject='Код подтверждения',
-            message=f'Код подтверждения: {confirmation_code}.',
+            message=f'Код: {confirmation_code}.',
             from_email=settings.EMAIL_ADMIN,
             recipient_list=[user.email],
         )
@@ -139,23 +137,18 @@ class SignUpView(generics.CreateAPIView):
 
 
 class TokenObtainView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all().order_by('id')
-    serializer_class = TokenSerializer
-    permission_classes = (AllowAny,)
+    queryset = CustomUser.objects.all()
 
     def post(self, request):
         serializer = TokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data.get('username')
-        confirmation_code = serializer.validated_data.get('confirmation_code')
+        username = serializer.data.get('username')
+        confirmation_code = serializer.data.get('confirmation_code')
         user = get_object_or_404(CustomUser, username=username)
 
         if default_token_generator.check_token(user, confirmation_code):
             token = AccessToken.for_user(user)
-            return Response(
-                {'token': f'{token}'},
-                status.HTTP_200_OK
-            )
+            return Response({'token': f'{token}'}, status.HTTP_200_OK)
         return Response(
             {'message': 'Неверный код.'},
             status.HTTP_400_BAD_REQUEST
@@ -165,19 +158,19 @@ class TokenObtainView(generics.CreateAPIView):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = CustomUser.objects.all().order_by('id')
     serializer_class = UserSerializer
-    lookup_field = 'username'
     permission_classes = (IsSuperUserOrAdmin,)
     filter_backends = (filters.SearchFilter,)
+    lookup_field = 'username'
     search_fields = ('=username',)
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     @action(
         detail=False,
+        url_path='me',
         methods=['get', 'patch'],
         permission_classes=[IsAuthenticated,],
-        url_path='me'
     )
-    def edit_profile(self, request):
+    def update_profile(self, request):
         serializer = UserMeSerializer(request.user)
         if request.method == 'PATCH':
             if request.user.role == 'admin':

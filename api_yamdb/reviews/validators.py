@@ -11,9 +11,9 @@ def validate_username(value):
         raise ValidationError(
             'Логин не может быть "me"'
         )
-    if not bool(re.match(r'[\w.@+-]+\Z$', value)):
+    if not re.match(r'[\w.@+-]+\Z$', value):
         raise ValidationError(
-            'Некорректные символы в username'
+            'Запрещённые символы в никнейме'
         )
     return value
 
