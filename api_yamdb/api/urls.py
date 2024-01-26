@@ -6,9 +6,11 @@ from .views import (
     GenreViewSet,
     TitleViewSet,
     ReviewViewSet,
-    CommentViewSet
+    CommentViewSet,
+    SignUpView,
+    TokenObtainView,
+    UserViewSet
 )
-from users.views import SignUpView, TokenObtainView, UserViewSet
 
 router_v1 = DefaultRouter()
 router_v1.register('users', UserViewSet, basename='users')
