@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db.models import Avg
 
 from .constants import (CHARACTER_QUANTITY,
                         NAME_LENGTH, SLUG_LENGTH,
