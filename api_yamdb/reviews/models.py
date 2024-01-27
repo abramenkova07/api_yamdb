@@ -2,7 +2,6 @@ from django.contrib import admin
 from django.db import models
 from django.db.models import Avg
 from django.contrib.auth.models import AbstractUser
-from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 
 from reviews.constants import (CHARACTER_QUANTITY,
@@ -29,7 +28,7 @@ class User(AbstractUser):
     )
     role = models.CharField(
         'роль',
-        max_length=20,
+        max_length=max(len(ROLES[1]) for ROLES in ROLES),
         choices=ROLES,
         default=USER,
         blank=True
@@ -40,7 +39,7 @@ class User(AbstractUser):
     )
     last_name = models.CharField(
         'фамилия',
-        max_length=150,
+        max_length=USERNAME_LENGTH,
         blank=True
     )
 
@@ -60,6 +59,7 @@ class User(AbstractUser):
         return self.role == 'user'
 
     class Meta:
+        ordering = ('id',)
         verbose_name = 'пользователь'
         verbose_name_plural = 'пользователи'
 
