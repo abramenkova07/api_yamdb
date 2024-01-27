@@ -1,7 +1,9 @@
+from datetime import datetime
+
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
 
 from reviews.constants import (
@@ -12,6 +14,13 @@ from reviews.models import (
 )
 from reviews.validators import validate_username
 from reviews.validators_2 import validate_unique
+
+
+class AuthorFieldMixin(serializers.Serializer):
+    author = serializers.SlugRelatedField(
+        slug_field='username',
+        read_only=True
+    )
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -68,43 +77,26 @@ class ReadTitleSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ReviewSerializer(serializers.ModelSerializer):
-    author = SlugRelatedField(
-        slug_field='username',
-        read_only=True
-    )
-    title = serializers.SlugRelatedField(
-        slug_field='name',
-        read_only=True
-    )
+class ReviewSerializer(AuthorFieldMixin, serializers.ModelSerializer):
 
     class Meta:
-        fields = '__all__'
+        fields = ('id', 'author', 'text', 'score', 'pub_date')
         model = Review
 
     def validate(self, data):
         request = self.context['request']
-        author = request.user
         title_id = self.context['view'].kwargs.get('title_id')
-        title = get_object_or_404(Title, pk=title_id)
         if request.method == 'POST':
-            if title.reviews.select_related('title').filter(author=author):
+            author = request.user
+            if Review.objects.filter(title_id=title_id, author=author):
                 raise ValidationError('Вы уже оставили отзыв!')
         return data
 
 
-class CommentSerializer(serializers.ModelSerializer):
-    author = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='username'
-    )
-    review = serializers.SlugRelatedField(
-        read_only=True,
-        slug_field='text'
-    )
+class CommentSerializer(AuthorFieldMixin, serializers.ModelSerializer):
 
     class Meta:
-        fields = '__all__'
+        fields = ('id', 'author', 'text', 'pub_date')
         model = Comment
 
 
