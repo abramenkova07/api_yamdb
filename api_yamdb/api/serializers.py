@@ -5,10 +5,14 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
 
-from reviews.models import (
-    Category, Comment, CustomUser, Genre, Review, Title
+from reviews.constants import (
+    ADMIN, EMAIL_LEHGTH, USERNAME_LENGTH, MODERATOR, USER
 )
-from reviews.validators import validate_username, validate_unique
+from reviews.models import (
+    Category, Comment, Genre, Review, Title, User
+)
+from reviews.validators import validate_username
+from reviews.validators_2 import validate_unique
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -108,25 +112,25 @@ class CommentSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,
-        max_length=50,
+        max_length=USERNAME_LENGTH,
         validators=[validate_username,
-                    UniqueValidator(queryset=CustomUser.objects.all())]
+                    UniqueValidator(queryset=User.objects.all())]
     )
     email = serializers.EmailField(
         required=True,
-        max_length=200,
-        validators=[UniqueValidator(queryset=CustomUser.objects.all())]
+        max_length=EMAIL_LEHGTH,
+        validators=[UniqueValidator(queryset=User.objects.all())]
     )
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = (
             'username', 'email', 'first_name',
             'last_name', 'bio', 'role'
         )
 
     def validate_role(self, value):
-        if value not in ['user', 'admin', 'moderator']:
+        if value not in [ADMIN, MODERATOR, USER]:
             raise ValidationError(
                 'Нет такой роли.'
             )
@@ -136,16 +140,16 @@ class UserSerializer(serializers.ModelSerializer):
 class SignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
-        max_length=50,
+        max_length=USERNAME_LENGTH,
         validators=[validate_username]
     )
     email = serializers.EmailField(
         required=True,
-        max_length=200
+        max_length=EMAIL_LEHGTH
     )
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = (
             'email',
             'username',
@@ -158,16 +162,7 @@ class SignUpSerializer(serializers.Serializer):
 class TokenSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
-        max_length=50,
+        max_length=USERNAME_LENGTH,
         validators=[validate_username]
     )
     confirmation_code = serializers.CharField()
-
-
-class UserMeSerializer(UserSerializer):
-    class Meta(UserSerializer.Meta):
-        model = CustomUser
-        fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role')
-        read_only_fields = ('role',)

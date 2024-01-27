@@ -12,6 +12,7 @@ class OnlyAdminIfNotGet(permissions.BasePermission):
 
 
 class IsAdminAuthorModeratorOrReadOnly(permissions.BasePermission):
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
@@ -27,7 +28,8 @@ class IsAdminAuthorModeratorOrReadOnly(permissions.BasePermission):
 
 
 class IsSuperUserOrAdmin(permissions.BasePermission):
+
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
-            request.user.is_superuser or request.user.role == 'admin'
+            request.user.is_superuser or request.user.is_admin
         )

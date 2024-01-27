@@ -28,13 +28,17 @@ router_v1.register(
     basename='reviews'
 )
 
+auth_urls = [
+    path('auth/signup/', SignUpView.as_view(), name='signup'),
+    path('auth/token/', TokenObtainView.as_view(), name='token')
+]
+
 urlpatterns = [
     path(
         'v1/', include(
             [
                 path('', include(router_v1.urls)),
-                path('auth/signup/', SignUpView.as_view(), name='signup'),
-                path('auth/token/', TokenObtainView.as_view(), name='token')
+                path('', include(auth_urls)),
             ]
         )
     ),

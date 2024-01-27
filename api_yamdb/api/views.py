@@ -26,11 +26,10 @@ from api.serializers import (
     ReviewSerializer,
     SignUpSerializer,
     TokenSerializer,
-    UserMeSerializer,
     UserSerializer,
     WriteTitleSerializer,
 )
-from reviews.models import Category, CustomUser, Genre, Review, Title
+from reviews.models import Category, Genre, Review, Title, User
 
 
 class BaseMixin:
@@ -106,14 +105,14 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class SignUpView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
+    queryset = User.objects.all()
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.data.get('username')
         email = serializer.data.get('email')
-        user, created = CustomUser.objects.get_or_create(
+        user, _ = User.objects.get_or_create(
             username=username,
             email=email
         )
@@ -129,14 +128,14 @@ class SignUpView(generics.CreateAPIView):
 
 
 class TokenObtainView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
+    queryset = User.objects.all()
 
     def post(self, request):
         serializer = TokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.data.get('username')
         confirmation_code = serializer.data.get('confirmation_code')
-        user = get_object_or_404(CustomUser, username=username)
+        user = get_object_or_404(User, username=username)
 
         if default_token_generator.check_token(user, confirmation_code):
             token = AccessToken.for_user(user)
@@ -148,7 +147,7 @@ class TokenObtainView(generics.CreateAPIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = CustomUser.objects.all().order_by('id')
+    queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = (IsSuperUserOrAdmin,)
     filter_backends = (filters.SearchFilter,)
@@ -163,19 +162,13 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def update_profile(self, request):
-        serializer = UserMeSerializer(request.user)
+        serializer = UserSerializer(request.user)
         if request.method == 'PATCH':
-            if request.user.role == 'admin':
-                serializer = UserSerializer(
-                    self.request.user,
-                    data=request.data,
-                    partial=True
-                )
-            else:
-                serializer = UserMeSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
+            serializer = UserSerializer(
+                request.user,
+                data=request.data,
+                partial=True
+            )
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
