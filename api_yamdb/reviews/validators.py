@@ -3,7 +3,7 @@ import re
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from reviews.models import CustomUser
+from .models import CustomUser
 
 
 def validate_username(value):

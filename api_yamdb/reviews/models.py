@@ -1,11 +1,15 @@
+from datetime import datetime
+
+from django.contrib import admin
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 
-from reviews.constants import (CHARACTER_QUANTITY,
-                               NAME_LENGTH, SLUG_LENGTH,
-                               MAX_RATING, MIN_RATING,
-                               ROLES)
+from .constants import (CHARACTER_QUANTITY,
+                        NAME_LENGTH, SLUG_LENGTH,
+                        MAX_RATING, MIN_RATING,
+                        ROLES)
 
 
 class CustomUser(AbstractUser):
@@ -70,39 +74,45 @@ class CustomUser(AbstractUser):
 class BaseModel(models.Model):
     slug = models.SlugField('Слаг', max_length=SLUG_LENGTH,
                             unique=True)
+    name = models.CharField('Название', max_length=NAME_LENGTH,
+                            unique=True)
 
     class Meta:
         abstract = True
 
+    def __str__(self):
+        return self.name[:CHARACTER_QUANTITY]
+
 
 class Category(BaseModel):
-    name = models.CharField('Категория', max_length=NAME_LENGTH,
-                            unique=True)
+    pass
 
     class Meta:
+        ordering = ('slug',)
         verbose_name = 'категория'
         verbose_name_plural = 'категории'
 
-    def __str__(self):
-        return self.name[:CHARACTER_QUANTITY]
-
 
 class Genre(BaseModel):
-    name = models.CharField('Жанр', max_length=NAME_LENGTH,
-                            unique=True)
+    pass
 
     class Meta:
+        ordering = ('slug',)
         verbose_name = 'жанр'
         verbose_name_plural = 'жанры'
 
-    def __str__(self):
-        return self.name[:CHARACTER_QUANTITY]
+
+def validate_year(value):
+    if value > datetime.today().year:
+        raise ValidationError(
+            'Год произведения не может быть позже текущего года.')
+    return value
 
 
 class Title(models.Model):
     name = models.CharField('Произведение',
                             max_length=NAME_LENGTH)
-    year = models.PositiveSmallIntegerField('Год')
+    year = models.SmallIntegerField('Год', validators=[validate_year])
     description = models.TextField('Текст', blank=True)
     genre = models.ManyToManyField(Genre, verbose_name='Жанр',
                                    through='GenreTitle')
@@ -111,6 +121,7 @@ class Title(models.Model):
                                  null=True)
 
     class Meta:
+        ordering = ('year',)
         verbose_name = 'произведение'
         verbose_name_plural = 'произведения'
         default_related_name = 'titles'
@@ -118,14 +129,32 @@ class Title(models.Model):
     def __str__(self):
         return self.name[:CHARACTER_QUANTITY]
 
+    @admin.display(description='Жанры')
+    def genres(self):
+        return ', '.join([genre.name for genre in self.genre.all()])
+
+    # @property
+    # def rating(self):
+    #     return self.reviews.all().annotate(Avg('score'))
+
+    # @rating.setter
+    # def rating(self, value):
+    #     self._rating = value
+
 
 class GenreTitle(models.Model):
-    genre = models.ForeignKey(Genre, on_delete=models.SET_NULL, null=True)
-    title = models.ForeignKey(Title, on_delete=models.SET_NULL, null=True)
+    genre = models.ForeignKey(Genre, on_delete=models.SET_NULL,
+                              null=True, verbose_name='Жанр')
+    title = models.ForeignKey(Title, on_delete=models.SET_NULL,
+                              null=True, verbose_name='Произведение')
+
+    class Meta:
+        verbose_name = 'жанр'
+        verbose_name_plural = 'жанры'
+        ordering = ('genre',)
 
     def __str__(self):
-        return (f'{self.title[:CHARACTER_QUANTITY]}'
-                f'-{self.genre[:CHARACTER_QUANTITY]}')
+        return 'Жанры'
 
 
 class Review(models.Model):
