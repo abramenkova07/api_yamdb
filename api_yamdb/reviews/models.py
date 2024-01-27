@@ -7,53 +7,43 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 
-from .constants import (CHARACTER_QUANTITY,
-                        NAME_LENGTH, SLUG_LENGTH,
-                        MAX_RATING, MIN_RATING,
-                        ROLES)
+from reviews.constants import (CHARACTER_QUANTITY,
+                               EMAIL_LEHGTH, NAME_LENGTH,
+                               SLUG_LENGTH, MAX_RATING,
+                               MIN_RATING, ROLES, USER,
+                               USERNAME_LENGTH)
+from reviews.validators import validate_username
 
 
-class CustomUser(AbstractUser):
+class User(AbstractUser):
 
     username = models.CharField(
-        max_length=150,
+        max_length=USERNAME_LENGTH,
         unique=True,
         blank=False,
-        null=False
+        null=False,
+        validators=[validate_username],
     )
     email = models.EmailField(
-        max_length=256,
+        max_length=EMAIL_LEHGTH,
         unique=True,
-        blank=False,
         null=False
     )
     role = models.CharField(
         'роль',
         max_length=20,
         choices=ROLES,
-        default='user',
+        default=USER,
         blank=True
     )
     bio = models.TextField(
         'биография',
         blank=True,
     )
-    first_name = models.CharField(
-        'имя',
-        max_length=150,
-        blank=True
-    )
     last_name = models.CharField(
         'фамилия',
         max_length=150,
         blank=True
-    )
-    confirmation_code = models.CharField(
-        'код подтверждения',
-        max_length=256,
-        null=True,
-        blank=False,
-        default='XXXX'
     )
 
     def __str__(self):
@@ -70,6 +60,14 @@ class CustomUser(AbstractUser):
     @property
     def is_user(self):
         return self.role == 'user'
+    
+    class Meta:
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'пользователи'
+
+    def __str__(self):
+        return self.username[:CHARACTER_QUANTITY]
+
 
 
 class BaseModel(models.Model):
@@ -161,7 +159,7 @@ class GenreTitle(models.Model):
 
 class Review(models.Model):
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='user_reviews'
     )
@@ -203,7 +201,7 @@ class Comment(models.Model):
         related_name='comments'
     )
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         related_name='user_comments'
     )
