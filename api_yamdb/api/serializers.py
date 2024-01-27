@@ -1,14 +1,19 @@
 from datetime import datetime
 
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 
-from reviews.models import (
-    Category, Comment, CustomUser, Genre, Review, Title
+from reviews.constants import (
+    ADMIN, EMAIL_LEHGTH, USERNAME_LENGTH, MODERATOR, USER
 )
-from reviews.validators import validate_username, validate_unique
+from reviews.models import (
+    Category, Comment, Genre, Review, Title, User
+)
+from reviews.validators import validate_username
+from reviews.validators_2 import validate_unique
 
 
 class AuthorFieldMixin(serializers.Serializer):
@@ -44,7 +49,9 @@ class WriteTitleSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         many=True,
         slug_field='slug',
-        queryset=Genre.objects.all()
+        queryset=Genre.objects.all(),
+        required=True,
+        allow_empty=False
     )
     category = serializers.SlugRelatedField(
         slug_field='slug',
@@ -55,27 +62,19 @@ class WriteTitleSerializer(serializers.ModelSerializer):
         model = Title
         fields = '__all__'
 
-    def validate_year(self, value):
-        if value > datetime.today().year:
-            raise serializers.ValidationError(
-                'Год произведения не может быть позже текущего года.')
-        return value
+    def to_representation(self, instance):
+        serializer = ReadTitleSerializer(instance)
+        return serializer.data
 
 
 class ReadTitleSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True, read_only=True)
     category = CategorySerializer(read_only=True)
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField()
 
     class Meta:
         model = Title
         fields = '__all__'
-
-    def get_rating(self, obj):
-        rating = obj.reviews.aggregate(Avg('score'))['score__avg']
-        if rating:
-            return round(rating)
-        return None
 
 
 class ReviewSerializer(AuthorFieldMixin, serializers.ModelSerializer):
@@ -104,25 +103,25 @@ class CommentSerializer(AuthorFieldMixin, serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,
-        max_length=50,
+        max_length=USERNAME_LENGTH,
         validators=[validate_username,
-                    UniqueValidator(queryset=CustomUser.objects.all())]
+                    UniqueValidator(queryset=User.objects.all())]
     )
     email = serializers.EmailField(
         required=True,
-        max_length=200,
-        validators=[UniqueValidator(queryset=CustomUser.objects.all())]
+        max_length=EMAIL_LEHGTH,
+        validators=[UniqueValidator(queryset=User.objects.all())]
     )
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = (
             'username', 'email', 'first_name',
             'last_name', 'bio', 'role'
         )
 
     def validate_role(self, value):
-        if value not in ['user', 'admin', 'moderator']:
+        if value not in [ADMIN, MODERATOR, USER]:
             raise ValidationError(
                 'Нет такой роли.'
             )
@@ -132,16 +131,16 @@ class UserSerializer(serializers.ModelSerializer):
 class SignUpSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
-        max_length=50,
+        max_length=USERNAME_LENGTH,
         validators=[validate_username]
     )
     email = serializers.EmailField(
         required=True,
-        max_length=200
+        max_length=EMAIL_LEHGTH
     )
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = (
             'email',
             'username',
@@ -154,16 +153,7 @@ class SignUpSerializer(serializers.Serializer):
 class TokenSerializer(serializers.Serializer):
     username = serializers.CharField(
         required=True,
-        max_length=50,
+        max_length=USERNAME_LENGTH,
         validators=[validate_username]
     )
     confirmation_code = serializers.CharField()
-
-
-class UserMeSerializer(UserSerializer):
-    class Meta(UserSerializer.Meta):
-        model = CustomUser
-        fields = (
-            'username', 'email', 'first_name',
-            'last_name', 'bio', 'role')
-        read_only_fields = ('role',)

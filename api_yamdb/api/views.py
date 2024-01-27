@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from rest_framework import (
@@ -11,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
+from .filters import GenreCategoryFilterBackend
 from api.permissions import (
     IsSuperUserOrAdmin,
     OnlyAdminIfNotGet,
@@ -24,45 +26,44 @@ from api.serializers import (
     ReviewSerializer,
     SignUpSerializer,
     TokenSerializer,
-    UserMeSerializer,
     UserSerializer,
     WriteTitleSerializer,
 )
-from reviews.models import Category, CustomUser, Genre, Review, Title
+from reviews.models import Category, Genre, Review, Title, User
+
+
+class BaseMixin:
+    permission_classes = (OnlyAdminIfNotGet,)
+    pagination_class = pagination.PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
 
 
 class CategoryViewSet(mixins.CreateModelMixin,
                       mixins.DestroyModelMixin,
                       mixins.ListModelMixin,
+                      BaseMixin,
                       viewsets.GenericViewSet):
-    queryset = Category.objects.all().order_by('slug')
+    queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (OnlyAdminIfNotGet,)
-    pagination_class = pagination.PageNumberPagination
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = 'slug'
 
 
 class GenreViewSet(mixins.CreateModelMixin,
                    mixins.DestroyModelMixin,
                    mixins.ListModelMixin,
+                   BaseMixin,
                    viewsets.GenericViewSet):
-    queryset = Genre.objects.all().order_by('slug')
+    queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (OnlyAdminIfNotGet, )
-    pagination_class = pagination.PageNumberPagination
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = 'slug'
 
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.prefetch_related('genre').select_related(
-        'category').order_by('id')
+        'category').annotate(rating=Avg('reviews__score')).order_by('year')
     permission_classes = (OnlyAdminIfNotGet,)
     pagination_class = pagination.PageNumberPagination
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, GenreCategoryFilterBackend)
     filterset_fields = ('name', 'year')
     http_method_names = ['get', 'post', 'patch', 'delete']
 
@@ -70,16 +71,6 @@ class TitleViewSet(viewsets.ModelViewSet):
         if self.action in ('retrieve', 'list'):
             return ReadTitleSerializer
         return WriteTitleSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        genre_slug = self.request.query_params.get('genre', None)
-        category_slug = self.request.query_params.get('category', None)
-        if genre_slug:
-            queryset = queryset.filter(genre__slug=genre_slug)
-        if category_slug:
-            queryset = queryset.filter(category__slug=category_slug)
-        return queryset
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -117,14 +108,14 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 
 class SignUpView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
+    queryset = User.objects.all()
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.data.get('username')
         email = serializer.data.get('email')
-        user, created = CustomUser.objects.get_or_create(
+        user, _ = User.objects.get_or_create(
             username=username,
             email=email
         )
@@ -140,14 +131,14 @@ class SignUpView(generics.CreateAPIView):
 
 
 class TokenObtainView(generics.CreateAPIView):
-    queryset = CustomUser.objects.all()
+    queryset = User.objects.all()
 
     def post(self, request):
         serializer = TokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         username = serializer.data.get('username')
         confirmation_code = serializer.data.get('confirmation_code')
-        user = get_object_or_404(CustomUser, username=username)
+        user = get_object_or_404(User, username=username)
 
         if default_token_generator.check_token(user, confirmation_code):
             token = AccessToken.for_user(user)
@@ -159,7 +150,7 @@ class TokenObtainView(generics.CreateAPIView):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = CustomUser.objects.all().order_by('id')
+    queryset = User.objects.all().order_by('id')
     serializer_class = UserSerializer
     permission_classes = (IsSuperUserOrAdmin,)
     filter_backends = (filters.SearchFilter,)
@@ -174,20 +165,14 @@ class UserViewSet(viewsets.ModelViewSet):
         permission_classes=[IsAuthenticated],
     )
     def update_profile(self, request):
-        serializer = UserMeSerializer(request.user)
+        serializer = UserSerializer(request.user)
         if request.method == 'PATCH':
-            if request.user.role == 'admin':
-                serializer = UserSerializer(
-                    self.request.user,
-                    data=request.data,
-                    partial=True
-                )
-            else:
-                serializer = UserMeSerializer(
-                    request.user,
-                    data=request.data,
-                    partial=True)
+            serializer = UserSerializer(
+                request.user,
+                data=request.data,
+                partial=True,
+            )
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            serializer.save(role=request.user.role)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.data)

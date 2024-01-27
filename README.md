@@ -69,4 +69,60 @@ python3 manage.py csvtodb
 python3 manage.py runserver
 ```
 
-Авторы проекта: Арина Абраменко, Сергей Дрожжин, Наталья Кокшарова
+## Примеры запросов
+
+- Регистрация нового пользователя:
+
+```r
+POST /api/v1/auth/signup/
+```
+
+в body
+
+```json
+{
+"username": "string",
+"email": "string",
+}
+```
+
+- Получение JWT-токена:
+
+```r
+POST /api/v1/auth/token/
+```
+
+в body
+
+```json
+{
+"username": "string",
+"confirmation_code": "string",
+}
+```
+
+- Получение списка всех пользователей:
+
+```r
+GET /api/v1/users/
+```
+
+- Получение пользователя по username:
+
+```r
+GET /api/v1/users/username
+```
+
+- Удаление пользователя по username:
+
+```r
+DELETE /api/v1/users/username
+```
+
+- Изменение данных своей учетной записи:
+
+```r
+PATCH /api/v1/users/me/
+```
+
+Авторы проекта: Арина Абраменкова, Сергей Дрожжин, Наталья Кокшарова
