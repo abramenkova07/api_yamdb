@@ -5,8 +5,8 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 
-from reviews.models import (Category, Comment, CustomUser,
-                            Genre, GenreTitle, Review, Title)
+from reviews.models import (Category, Comment, Genre,
+                            GenreTitle, Review, Title, User)
 
 
 class Command(BaseCommand):
@@ -22,14 +22,14 @@ class Command(BaseCommand):
                         Category, id=row['category'])
                 if 'author' in row:
                     row['author'] = get_object_or_404(
-                        CustomUser, id=row['author'])
+                        User, id=row['author'])
                 model_name.objects.create(**row)
         self.stdout.write(self.style.SUCCESS(
             f'Данные из "{file_name}" загружены в БД'))
 
     def handle(self, *args, **options):
         data = {
-            'users.csv': CustomUser,
+            'users.csv': User,
             'category.csv': Category,
             'genre.csv': Genre,
             'titles.csv': Title,
