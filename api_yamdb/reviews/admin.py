@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from reviews.models import (Category, Comment, CustomUser,
-                            Genre, Review, Title)
+from reviews.models import (Category, Comment,
+                            Genre, Review, Title, User)
 
 
 @admin.register(Category)
@@ -26,7 +26,7 @@ class TitleAdmin(admin.ModelAdmin):
     inlines = (GenreInline,)
 
 
-@admin.register(CustomUser)
+@admin.register(User)
 class CustomUserAdmin(admin.ModelAdmin):
     list_display = ('username', 'email', 'role', 'bio',
                     'first_name', 'last_name')
