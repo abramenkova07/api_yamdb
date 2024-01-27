@@ -1,4 +1,3 @@
-from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -58,7 +57,7 @@ class WriteTitleSerializer(serializers.ModelSerializer):
 class ReadTitleSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True, read_only=True)
     category = CategorySerializer(read_only=True)
-    # rating = serializers.IntegerField() закомитила временно, чтобы падал только тест по рейтингу
+    rating = serializers.IntegerField()
 
     class Meta:
         model = Title

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.contrib import admin
 from django.db import models
+from django.db.models import Avg
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -133,13 +134,14 @@ class Title(models.Model):
     def genres(self):
         return ', '.join([genre.name for genre in self.genre.all()])
 
-    # @property
-    # def rating(self):
-    #     return self.reviews.all().annotate(Avg('score'))
+    @property
+    def rating(self):
+        return self.reviews.values('score').aggregate(rating=Avg('score'))[
+            'rating']
 
-    # @rating.setter
-    # def rating(self, value):
-    #     self._rating = value
+    @rating.setter
+    def rating(self, value):
+        self._rating = value
 
 
 class GenreTitle(models.Model):
