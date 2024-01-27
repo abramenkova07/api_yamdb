@@ -1,7 +1,6 @@
-from datetime import datetime
-
 from django.contrib import admin
 from django.db import models
+from django.db.models import Avg
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -11,7 +10,7 @@ from reviews.constants import (CHARACTER_QUANTITY,
                                SLUG_LENGTH, MAX_RATING,
                                MIN_RATING, ROLES, USER,
                                USERNAME_LENGTH)
-from reviews.validators import validate_username
+from reviews.validators import validate_username, validate_year
 
 
 class User(AbstractUser):
@@ -59,14 +58,13 @@ class User(AbstractUser):
     @property
     def is_user(self):
         return self.role == 'user'
-    
+
     class Meta:
         verbose_name = 'пользователь'
         verbose_name_plural = 'пользователи'
 
     def __str__(self):
         return self.username[:CHARACTER_QUANTITY]
-
 
 
 class BaseModel(models.Model):
@@ -100,13 +98,6 @@ class Genre(BaseModel):
         verbose_name_plural = 'жанры'
 
 
-def validate_year(value):
-    if value > datetime.today().year:
-        raise ValidationError(
-            'Год произведения не может быть позже текущего года.')
-    return value
-
-
 class Title(models.Model):
     name = models.CharField('Произведение',
                             max_length=NAME_LENGTH)
@@ -131,13 +122,14 @@ class Title(models.Model):
     def genres(self):
         return ', '.join([genre.name for genre in self.genre.all()])
 
-    # @property
-    # def rating(self):
-    #     return self.reviews.all().annotate(Avg('score'))
+    @property
+    def rating(self):
+        return self.reviews.values('score').aggregate(rating=Avg('score'))[
+            'rating']
 
-    # @rating.setter
-    # def rating(self, value):
-    #     self._rating = value
+    @rating.setter
+    def rating(self, value):
+        self._rating = value
 
 
 class GenreTitle(models.Model):
@@ -152,7 +144,7 @@ class GenreTitle(models.Model):
         ordering = ('genre',)
 
     def __str__(self):
-        return 'Жанры'
+        return f'{self.genre}'
 
 
 class Review(models.Model):
