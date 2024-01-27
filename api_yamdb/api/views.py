@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db.models import Avg
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from rest_framework import (
@@ -11,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import AccessToken
 
+from .filters import GenreCategoryFilterBackend
 from api.permissions import (
     IsAdminAuthorModeratorOrReadOnly,
     IsSuperUserOrAdmin,
@@ -31,38 +33,38 @@ from api.serializers import (
 from reviews.models import Category, CustomUser, Genre, Review, Title
 
 
-class CategoryViewSet(mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin,
-                      mixins.ListModelMixin,
-                      viewsets.GenericViewSet):
-    queryset = Category.objects.all().order_by('slug')
-    serializer_class = CategorySerializer
+class BaseMixin:
     permission_classes = (OnlyAdminIfNotGet,)
     pagination_class = pagination.PageNumberPagination
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
+
+
+class CategoryViewSet(mixins.CreateModelMixin,
+                      mixins.DestroyModelMixin,
+                      mixins.ListModelMixin,
+                      BaseMixin,
+                      viewsets.GenericViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
 
 
 class GenreViewSet(mixins.CreateModelMixin,
                    mixins.DestroyModelMixin,
                    mixins.ListModelMixin,
+                   BaseMixin,
                    viewsets.GenericViewSet):
-    queryset = Genre.objects.all().order_by('slug')
+    queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (OnlyAdminIfNotGet, )
-    pagination_class = pagination.PageNumberPagination
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = 'slug'
 
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.prefetch_related('genre').select_related(
-        'category').order_by('id')
+        'category').annotate(rating=Avg('reviews__score')).order_by('year')
     permission_classes = (OnlyAdminIfNotGet,)
     pagination_class = pagination.PageNumberPagination
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, GenreCategoryFilterBackend)
     filterset_fields = ('name', 'year')
     http_method_names = ['get', 'post', 'patch', 'delete']
 
@@ -70,16 +72,6 @@ class TitleViewSet(viewsets.ModelViewSet):
         if self.action in ('retrieve', 'list'):
             return ReadTitleSerializer
         return WriteTitleSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        genre_slug = self.request.query_params.get('genre', None)
-        category_slug = self.request.query_params.get('category', None)
-        if genre_slug:
-            queryset = queryset.filter(genre__slug=genre_slug)
-        if category_slug:
-            queryset = queryset.filter(category__slug=category_slug)
-        return queryset
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

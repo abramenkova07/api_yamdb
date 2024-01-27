@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from django.db.models import Avg
+from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -39,7 +37,9 @@ class WriteTitleSerializer(serializers.ModelSerializer):
     genre = serializers.SlugRelatedField(
         many=True,
         slug_field='slug',
-        queryset=Genre.objects.all()
+        queryset=Genre.objects.all(),
+        required=True,
+        allow_empty=False
     )
     category = serializers.SlugRelatedField(
         slug_field='slug',
@@ -50,27 +50,19 @@ class WriteTitleSerializer(serializers.ModelSerializer):
         model = Title
         fields = '__all__'
 
-    def validate_year(self, value):
-        if value > datetime.today().year:
-            raise serializers.ValidationError(
-                'Год произведения не может быть позже текущего года.')
-        return value
+    def to_representation(self, instance):
+        serializer = ReadTitleSerializer(instance)
+        return serializer.data
 
 
 class ReadTitleSerializer(serializers.ModelSerializer):
     genre = GenreSerializer(many=True, read_only=True)
     category = CategorySerializer(read_only=True)
-    rating = serializers.SerializerMethodField()
+    # rating = serializers.IntegerField() закомитила временно, чтобы падал только тест по рейтингу
 
     class Meta:
         model = Title
         fields = '__all__'
-
-    def get_rating(self, obj):
-        rating = obj.reviews.aggregate(Avg('score'))['score__avg']
-        if rating:
-            return round(rating)
-        return None
 
 
 class ReviewSerializer(serializers.ModelSerializer):
