@@ -67,7 +67,7 @@ class User(AbstractUser):
         return self.username[:CHARACTER_QUANTITY]
 
 
-class BaseModel(models.Model):
+class SlugNameModel(models.Model):
     slug = models.SlugField('Слаг', max_length=SLUG_LENGTH,
                             unique=True)
     name = models.CharField('Название', max_length=NAME_LENGTH,
@@ -75,25 +75,24 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ('slug',)
 
     def __str__(self):
         return self.name[:CHARACTER_QUANTITY]
 
 
-class Category(BaseModel):
+class Category(SlugNameModel):
     pass
 
-    class Meta:
-        ordering = ('slug',)
+    class Meta(SlugNameModel.Meta):
         verbose_name = 'категория'
         verbose_name_plural = 'категории'
 
 
-class Genre(BaseModel):
+class Genre(SlugNameModel):
     pass
 
-    class Meta:
-        ordering = ('slug',)
+    class Meta(SlugNameModel.Meta):
         verbose_name = 'жанр'
         verbose_name_plural = 'жанры'
 
